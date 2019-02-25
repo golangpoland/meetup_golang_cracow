@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "GoCracow #3 - Grzegorz Miejski - TDD done right - tests immutable to refactor"
-categories: tdd, gocracow3
+tags: tdd, gocracow3
 ---
 
 Do you feel tired when you see a lot of tests failing just because you’ve introduced simple business logic change or done some small refactoring? And maybe your tests do not make you feel confident when developing new features? In this presentation, I will show real code examples of how to write tests that will help you develop new features fast and safely. A lot of practical do's and don'ts based on simple microservice project implemented in Golang. All ideas will be language agnostic so you can apply them in any of your projects :)

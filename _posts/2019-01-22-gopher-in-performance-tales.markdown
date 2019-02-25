@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "GoCracow #3 - Mateusz Szczyrzyca - Gopher in performance tales"
-categories: performance, gocracow3
+tags: performance, gocracow3
 ---
 
 The presentation is about performance aspects in Go (mostly), but sometimes in general. Go is allegedly a very performance focused language, so we try to find out if we should migrate our existing project codebase to Go, because of its performance. Moreover, perhaps we should start thinking today about choosing Go for new projects because of the same reason? Many developers face such dilemmas and we can't avoid it among Gophers as well. During this presentation, I will present some basic tools in Go which help us in terms of performance and show some use cases and gotchas in this area. And we will try to figure out the answer: is Go really suitable if the performance of our application is really critical?
