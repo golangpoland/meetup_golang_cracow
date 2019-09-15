@@ -26,15 +26,12 @@
 		<div class="reveal">
 			<div class="slides">
 				<section>
-					<h2>Two parts of the talk</h2>
-				</section>
-				<section>
 					<h2>Hi There!</h2>
 					<h3>I'm Bartłomiej Klimczak</h3>
 					#gopher #GDE #blogger
 				</section>
 				<section>
-					<h2>What BDD is?</h2>
+					<h2>What is BDD?</h2>
 				</section>
 				<section>
 					<h2>There's a library for it! </h2>
@@ -55,14 +52,249 @@
 					</ul>
 				</section>
 				<section>
-					<p>There're weaknesses  of this solution</p>
+					<h2>There're weaknesses of this solution</h2>
 					<ul>
-						<li>doesn't use th stanard <i>testing</i> package</li>
+						<li>doesn't use the standard <i>testing</i> package</li>
 						<li class="fragment fade-in">no good code coverage</li>
 						<li class="fragment fade-in">no debugging the test code!</li>
 						<li class="fragment fade-in">no built-in features like build tags</li>
 					</ul>
 				</section>
+				<section>
+					<h2>The global state!</h2>
+					<pre><code>// Godogs available to eat
+var Godogs int
+
+// somewhere in the test
+func FeatureContext(s *godog.Suite) {
+	s.Step(`^there are (\d+) godogs$`, thereAreGodogs)
+	s.Step(`^I eat (\d+)$`, iEat)
+	s.Step(`^there should be (\d+) remaining$`, thereShouldBeRemaining)
+
+	s.BeforeScenario(func(interface{}) {
+		Godogs = 0 // clean the state before every scenario
+	})
+}
+					</code></pre>
+				</section>
+				<section>
+					<h2>That's why <a href="">GoBDD</a> exists</h2>
+					<p><a href="https://github.com/go-bdd/gobdd">https://github.com/go-bdd/gobdd</a> </p>
+					<p>Main goals:</p>
+					<ul>
+						<li class="fragment fade-in">no magic</li>
+						<li class="fragment fade-in">easy to use</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Key features:</h2>
+					<ul>
+						<li>uses gherkin syntax</li>
+						<li class="fragment fade-in">uses standard <code>testing</code> package</li>
+						<li class="fragment fade-in">allows debugging and profiling the application</li>
+						<li class="fragment fade-in">uses <strong>context</strong> between steps</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Quick start</h2>
+					<pre>
+						<code data-noescape>go get github.com/go-bdd/gobdd</code></pre>
+
+					<pre>
+						<code data-noescape class="golang">func TestScenarios(t *testing.T) {
+	suite := gobdd.NewSuite(t)
+	suite.AddStep(`I add (\d+) and (\d+)`, add)
+	suite.AddStep(`I the result should equal (\d+)`, check)
+	suite.Run()
+}</code></pre>
+					<pre>
+						<code data-noescape class="gherkin"># features/my.feature
+Feature: math operations
+  Scenario: add two digits
+    When I add 1 and 2
+    Then I the result should equal 3</code></pre>
+				</section>
+				<section>
+					<h2>The context</h2>
+					<ul>
+						<li class="fragment fade-in">holds the data from previous steps</li>
+						<li class="fragment fade-in">holds step's parameters fetched from the step’s definition <small>(may change)</small></li>
+						<li class="fragment fade-in">easier parallelism</li>
+					</ul>
+
+					<p class="fragment fade-in">The goal: hold every required information about the step itself to be successfully executed.</p>
+				</section>
+				<section>
+					<h2>The context</h2>
+					Passing information between tests
+					<pre><code>// in the first step
+ctx.Set(name{}, "John")
+
+// in the second step
+fmt.Printf("Hi %s\n", ctx.GetString(name{})) // prints "Hi John"</code></pre>
+				</section>
+				<section>
+					<h2>The context</h2>
+					<p>List of functions for getting the data</p>
+					<ul>
+						<li>Context.GetInt(key interface{}, [defaultValue]) int</li>
+						<li>Context.GetFloat32(key interface{}, [defaultValue]) float32</li>
+						<li>Context.GetFloat64(key interface{}, [defaultValue]) float64</li>
+						<li>Context.GetString(key interface{}, [defaultValue]) string</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Creating steps <small>(may change)</small></h2>
+					Create a step by implementing the interface
+					<pre><code>type StepFunc func(ctx context.Context) error</code></pre>
+					Example:
+					<pre><code>func add(ctx context.Context) error {
+	res := ctx.GetIntParam(0) + ctx.GetIntParam(1)
+	ctx.Set("sumRes", res)
+	return nil
+}</code></pre>
+				</section>
+				<section>
+					<h2>The changes</h2>
+					<pre><code>type StepFunc func(ctx context.Context, args ...interface{}) error</code></pre>
+					Example:
+					<pre><code>func add(ctx context.Context, var1, var2 int) error {
+	res := var1 + var2
+	ctx.Set("sumRes", res)
+	return nil
+}</code></pre>
+				</section>
+
+				<section>
+					<h2>Handing errors</h2>
+					<ul>
+						<li>every step returns an error</li>
+						<li>panics are always recovered and transformed to error</li>
+						<li>if a parameter is not defined - the test fails</li>
+					</ul>
+					<pre><code>func (ctx Context) Get(key interface{}, defaultValue ...interface{}) interface{} {
+	if _, ok := ctx.values[key]; !ok {
+		if len(defaultValue) == 1 {
+			return defaultValue[0]
+		}
+		panic(fmt.Sprintf("the key %s does not exist", key))
+	}
+
+	return ctx.values[key]
+}</code></pre>
+				</section>
+
+				<section>
+					<h2>Testing the API - the testhttp package</h2>
+					Initialization
+					<pre><code>router := http.NewServeMux()
+testhttp.Build(s, router)</code></pre>
+				</section>
+				<section>
+					<h2>Example</h2>
+
+					<pre><code class="golang">func TestHTTP(t *testing.T) {
+	s := NewSuite(t, NewSuiteOptions())
+	router := http.NewServeMux()
+	router.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	router.HandleFunc("/json", func(w http.ResponseWriter, req *http.Request) {
+		_, _ = w.Write([]byte(`{"valid": "json"}`))
+		w.WriteHeader(http.StatusOK)
+	})
+
+	testhttp.Build(s, router)
+	s.Run()
+}</code></pre>
+				</section>
+				<section>
+					<h2>Example</h2>
+					<pre><code class="gherkin">Feature: HTTP requests
+  Scenario: test GET request
+    When I make a GET request to "/health"
+    Then the response code equals 200
+  Scenario: not existing URI
+    When I make a GET request to "/not-exists"
+    Then the response code equals 404
+  Scenario: testing JSON validation
+    When I make a GET request to "/json"
+    Then the response contains a valid JSON
+    And the response is "{"valid": "json"}"</code></pre>
+				</section>
+				<section>
+					<h2>Pre-defined steps</h2>
+
+					<ul>
+						<li><code class="highlighter-rouge">I make a (GET|POST|PUT|DELETE|OPTIONS) request to "([^"]*)</code></li>
+						<li><code class="highlighter-rouge">the response code equals (\d+)</code></li>
+						<li><code class="highlighter-rouge">the response contains a valid JSON</code></li>
+						<li><code class="highlighter-rouge">the response is "(.*)"</code></li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>A small package - <a href="https://github.com/go-bdd/assert">assert</a></h2>
+					<p>Available assertions:</p>
+					<ul>
+						<li>Equals</li>
+						<li>NotEquals</li>
+						<li>ObjectsAreEqual</li>
+						<li>Nil</li>
+						<li>NotNil</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>assert</h2>
+					<pre><code>func TestEqual(t *testing.T) {
+	if err := assert.Equals(1, 2); err == nil {
+		t.Error(err)
+	}
+
+	if err := assert.Equals(1, func() {}); err == nil {
+		t.Error("it shouldn't validate func in the param")
+	}
+
+	if err := assert.Equals(5, 5); err != nil {
+		t.Error(err)
+	}
+}
+					</code></pre>
+				</section>
+
+				<section>
+					<h2>Weak points</h2>
+					<ul>
+						<li class="fragment fade-in">very limited pre-defined steps</li>
+						<li class="fragment fade-in">not good compatibility with gherkin's output format</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>What next?</h2>
+					<ul>
+						<li class="fragment fade-in">improving the testhttp package</li>
+						<li class="fragment fade-in">write more packages (queues, reals API calls etc)</li>
+						<li class="fragment fade-in">implement output formats (TeamCity, JUnit etc)</li>
+						<li class="fragment fade-in">support for concurrent test execution</li>
+						<li class="fragment fade-in">command line parameters</li>
+						<li class="fragment fade-in">whatever will come to my mind :)</li>
+					</ul>
+				</section>
+				<section>
+					<h2>GitHub: <a href="https://github.com/go-bdd/gobdd">https://github.com/go-bdd/gobdd</a></h2>
+				</section>
+				<section>
+					<h2>Thank you!</h2>
+					<ul>
+						<li>Twitter: <a href="https://twitter.com/kabanek">@kabanek</a></li>
+						<li>Email: bartlomiej.klimczak88 at gmail.com</li>
+						<li><a href="https://developer20.com">developer20.com</a> </li>
+					</ul>
+				</section>
+
 			</div>
 		</div>
 
@@ -75,7 +307,6 @@
 			Reveal.initialize({
 				dependencies: [
 					{ src: 'plugin/markdown/marked.js' },
-					{ src: 'plugin/markdown/markdown.js' },
 					{ src: 'plugin/notes/notes.js', async: true },
 					{ src: 'plugin/highlight/highlight.js', async: true }
 				]
